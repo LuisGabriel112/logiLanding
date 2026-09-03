@@ -108,6 +108,15 @@
   .seq-js .seq-fade { transition: opacity 380ms ease; }
   .seq-js #seqBarrier { transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1); }
   #seqBarrier { transform-origin: 300px 110px; }
+  #veh { transform-origin: 32px 150px; }
+  .seq-js #wheelL, .seq-js #wheelR { transition: transform 550ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+  @keyframes seqBounce {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+  }
+  .seq-bounce { animation: seqBounce 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 
   .seq-step {
     border: 1px solid #161D28;
@@ -272,31 +281,41 @@
 
         <!-- Vehículo: por defecto ya cruzó (estado final, x=420) -->
         <g id="veh" style="transform:translate(420px,0);">
-          <!-- Corchetes de detección: ocultos por defecto (transitorios) -->
-          <g id="vehBbox" class="seq-fade" style="opacity:0">
-            <path d="M-8,110 L-8,100 L2,100" fill="none" stroke="#F97316" stroke-width="1.6"></path>
-            <path d="M62,100 L72,100 L72,110" fill="none" stroke="#F97316" stroke-width="1.6"></path>
-            <path d="M-8,156 L-8,166 L2,166" fill="none" stroke="#F97316" stroke-width="1.6"></path>
-            <path d="M62,166 L72,166 L72,156" fill="none" stroke="#F97316" stroke-width="1.6"></path>
-          </g>
+          <g id="vehBounce">
+            <!-- Corchetes de detección: ocultos por defecto (transitorios) -->
+            <g id="vehBbox" class="seq-fade" style="opacity:0">
+              <path d="M-8,110 L-8,100 L2,100" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+              <path d="M62,100 L72,100 L72,110" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+              <path d="M-8,156 L-8,166 L2,166" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+              <path d="M62,166 L72,166 L72,156" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+            </g>
 
-          <!-- Placa leída: oculta por defecto (transitoria) -->
-          <g id="vehPlate" class="seq-fade" style="opacity:0">
-            <rect x="7" y="76" width="50" height="18" rx="3" fill="#0B1119" stroke="#F97316" stroke-width="1"></rect>
-            <text x="32" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="#E8EDF5">AB·12·34</text>
-          </g>
+            <!-- Placa leída: oculta por defecto (transitoria) -->
+            <g id="vehPlate" class="seq-fade" style="opacity:0">
+              <rect x="7" y="76" width="50" height="18" rx="3" fill="#0B1119" stroke="#F97316" stroke-width="1"></rect>
+              <text x="32" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="#E8EDF5">AB·12·34</text>
+            </g>
 
-          <!-- Silueta del vehículo con sombreado plano (pseudo-3D): carrocería, techo iluminado y ventana -->
-          <path d="M2,148 C2,142 5,137 10,135 L15,135 C17,123 24,115 32,115 C40,115 47,123 49,135 L54,135 C59,137 62,142 62,148 Z" fill="url(#carBody)" stroke="#E8EDF5" stroke-width="1.4" stroke-linejoin="round"></path>
-          <path d="M18,133 C19,127 22,120 26,118 L38,118 C42,120 45,127 46,133 Z" fill="url(#carRoof)" stroke="#0B1119" stroke-width="1" stroke-linejoin="round"></path>
-          <ellipse cx="2.5" cy="141" rx="1.4" ry="2.2" fill="#F97316"></ellipse>
-          <ellipse cx="61.5" cy="141" rx="1.4" ry="2.2" fill="#EF4444" opacity="0.8"></ellipse>
-          <circle cx="16" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
-          <path d="M10,147 A7,7 0 0 1 22,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
-          <circle cx="16" cy="150" r="2" fill="#E8EDF5"></circle>
-          <circle cx="48" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
-          <path d="M42,147 A7,7 0 0 1 54,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
-          <circle cx="48" cy="150" r="2" fill="#E8EDF5"></circle>
+            <!-- Silueta del vehículo con sombreado plano (pseudo-3D): carrocería, techo iluminado y ventana -->
+            <path d="M2,148 C2,142 5,137 10,135 L15,135 C17,123 24,115 32,115 C40,115 47,123 49,135 L54,135 C59,137 62,142 62,148 Z" fill="url(#carBody)" stroke="#E8EDF5" stroke-width="1.4" stroke-linejoin="round"></path>
+            <path d="M18,133 C19,127 22,120 26,118 L38,118 C42,120 45,127 46,133 Z" fill="url(#carRoof)" stroke="#0B1119" stroke-width="1" stroke-linejoin="round"></path>
+            <ellipse cx="2.5" cy="141" rx="1.4" ry="2.2" fill="#F97316"></ellipse>
+            <ellipse cx="61.5" cy="141" rx="1.4" ry="2.2" fill="#EF4444" opacity="0.8"></ellipse>
+            <g id="wheelL" style="transform-origin:16px 150px;">
+              <circle cx="16" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
+              <path d="M10,147 A7,7 0 0 1 22,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
+              <line x1="16" y1="144" x2="16" y2="156" stroke="#E8EDF5" stroke-width="1" opacity="0.5"></line>
+              <line x1="10" y1="150" x2="22" y2="150" stroke="#E8EDF5" stroke-width="1" opacity="0.5"></line>
+              <circle cx="16" cy="150" r="2" fill="#E8EDF5"></circle>
+            </g>
+            <g id="wheelR" style="transform-origin:48px 150px;">
+              <circle cx="48" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
+              <path d="M42,147 A7,7 0 0 1 54,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
+              <line x1="48" y1="144" x2="48" y2="156" stroke="#E8EDF5" stroke-width="1" opacity="0.5"></line>
+              <line x1="42" y1="150" x2="54" y2="150" stroke="#E8EDF5" stroke-width="1" opacity="0.5"></line>
+              <circle cx="48" cy="150" r="2" fill="#E8EDF5"></circle>
+            </g>
+          </g>
         </g>
       </svg>
 
@@ -523,13 +542,39 @@
     var barrier = document.getElementById("seqBarrier");
     var logEntry = document.getElementById("seqLogEntry");
     var steps = container.querySelectorAll(".seq-step");
+    var vehBounce = document.getElementById("vehBounce");
+    var wheelL = document.getElementById("wheelL");
+    var wheelR = document.getElementById("wheelR");
 
     var STAGE_X = [20, 210, 210, 210, 420];
+    var STAGE_SCALE = [0.85, 1, 1, 1, 1];
+    var WHEEL_CIRCUMFERENCE = 2 * Math.PI * 7;
     var stage = 0;
+    var prevX = STAGE_X[0];
+    var wheelDeg = 0;
     var loopTimer = null;
 
+    function bounce() {
+      if (!vehBounce) return;
+      vehBounce.classList.remove("seq-bounce");
+      void vehBounce.offsetWidth;
+      vehBounce.classList.add("seq-bounce");
+    }
+
     function applyStage(s) {
-      veh.style.transform = "translate(" + STAGE_X[s] + "px,0)";
+      var x = STAGE_X[s];
+      var deltaX = x - prevX;
+      wheelDeg += (deltaX / WHEEL_CIRCUMFERENCE) * 360;
+      prevX = x;
+
+      veh.style.transform = "translate(" + x + "px,0) scale(" + STAGE_SCALE[s] + ")";
+      if (wheelL && wheelR) {
+        var wheelTransform = "rotate(" + wheelDeg.toFixed(1) + "deg)";
+        wheelL.style.transform = wheelTransform;
+        wheelR.style.transform = wheelTransform;
+      }
+      if (deltaX !== 0) bounce();
+
       bbox.style.opacity = (s >= 1 && s <= 3) ? "1" : "0";
       plate.style.opacity = (s >= 2 && s <= 3) ? "1" : "0";
       verdict.style.opacity = (s >= 3) ? "1" : "0";
@@ -548,6 +593,7 @@
     function startLoop() {
       if (loopTimer) return;
       stage = 0;
+      prevX = STAGE_X[0];
       applyStage(0);
       loopTimer = setInterval(tick, 700);
     }
