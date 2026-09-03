@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogiGate — Control de acceso vehicular para patios logísticos y portuarios</title>
+<meta name="description" content="LogiGate: detección de vehículo, lectura automática de placa y veredicto de acceso al entrar y salir. Procesamiento local, operación sin internet, bitácora digital con evidencia. Caso inicial: Puerto de Veracruz.">
+
+<!-- Open Graph: reemplazar og:image por una captura real (1200x630) alojada en el dominio antes de publicar -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="LogiGate — Control de acceso vehicular para patios logísticos y portuarios">
+<meta property="og:description" content="Detección de vehículo, lectura de placa y veredicto automático al entrar y salir. Procesamiento local, opera sin internet. Desarrollado por Marventec, Veracruz.">
+<meta property="og:image" content="https://logigate.com.mx/og-image.jpg">
+<meta property="og:url" content="https://logigate.com.mx">
+<meta property="og:locale" content="es_MX">
+
+<!-- Favicon SVG inline: arco naranja sobre fondo negro, reemplazar si se define un logo definitivo -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23000000'/%3E%3Cpath d='M8 40 A28 28 0 0 1 56 24' fill='none' stroke='%23F97316' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#000000',
+          surface: '#080C14',
+          surface2: '#0B1119',
+          border: '#161D28',
+          fg: '#E8EDF5',
+          fgmuted: '#8B97A8',
+          accent: '#F97316',
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+
+<style>
+  :root { color-scheme: dark; }
+  html { scroll-behavior: smooth; }
+  body { background: #04060A; font-feature-settings: "tnum"; }
+
+  /* ---------- Hero arc: luz construida solo con CSS, sin imágenes ---------- */
+  .hero { position: relative; background: #000000; overflow: hidden; }
+  .hero-arc-wrap {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    will-change: transform;
+  }
+  .hero-arc {
+    position: absolute;
+    top: -62%; right: -38%;
+    width: 130%; height: 130%;
+    max-width: 1500px; max-height: 1500px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,221,179,0.95);
+    box-shadow:
+      0 0 36px 6px rgba(249,115,22,0.45),
+      0 0 90px 24px rgba(249,115,22,0.22),
+      0 0 200px 70px rgba(239,68,68,0.10);
+  }
+  .hero-arc-halo {
+    position: absolute;
+    top: -62%; right: -38%;
+    width: 130%; height: 130%;
+    max-width: 1500px; max-height: 1500px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 68% 32%, rgba(249,115,22,0.30), rgba(239,68,68,0.09) 40%, transparent 65%);
+    filter: blur(50px);
+  }
+  @media (max-width: 767px) {
+    .hero-arc, .hero-arc-halo { top: -48%; right: -55%; width: 160%; height: 160%; }
+  }
+
+  .pill { border: 1px solid rgba(232,237,245,0.18); border-radius: 999px; }
+  .pill-accent { border: 1px solid rgba(249,115,22,0.5); }
+  .hairline { border: 1px solid #161D28; }
+  .hairline-t { border-top: 1px solid #161D28; }
+  .hairline-b { border-bottom: 1px solid #161D28; }
+
+  /* ---------- Revelado al scroll: visible por defecto, JS aplica el estado oculto ---------- */
+  .reveal {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { transition: none !important; }
+  }
+
+  /* ---------- Secuencia de acceso vehicular: estado por defecto = final (sin JS) ---------- */
+  .seq-js #veh { transition: transform 550ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .seq-js .seq-fade { transition: opacity 380ms ease; }
+  .seq-js #seqBarrier { transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1); }
+  #seqBarrier { transform-origin: 300px 110px; }
+
+  .seq-step {
+    border: 1px solid #161D28;
+    color: #8B97A8;
+    transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease;
+  }
+  .seq-step.is-active {
+    border-color: #F97316;
+    color: #F97316;
+    background: rgba(249,115,22,0.08);
+  }
+
+  ::selection { background: rgba(249,115,22,0.35); color: #fff; }
+</style>
+</head>
+
+<body class="text-fg font-sans antialiased">
+
+<!-- ============ HERO ============ -->
+<header class="hero flex flex-col">
+  <div class="hero-arc-wrap" id="heroArcWrap">
+    <div class="hero-arc" id="heroArc"></div>
+    <div class="hero-arc-halo" id="heroArcHalo"></div>
+  </div>
+
+  <!-- Navegación -->
+  <div class="relative z-10 max-w-6xl mx-auto w-full px-6 pt-6">
+    <nav class="pill bg-white/5 backdrop-blur-0 flex items-center justify-between px-4 py-2.5 md:justify-end md:gap-6">
+      <span class="text-sm font-semibold tracking-tight text-fg md:hidden">LogiGate</span>
+      <div class="hidden md:flex items-center gap-6 text-sm text-fgmuted">
+        <a href="#problema" class="hover:text-fg transition-colors">El problema</a>
+        <a href="#como-funciona" class="hover:text-fg transition-colors">Cómo funciona</a>
+        <a href="#especificaciones" class="hover:text-fg transition-colors">Especificaciones</a>
+        <a href="#privacidad" class="hover:text-fg transition-colors">Privacidad</a>
+        <a href="#contacto" class="pill-accent text-accent px-3 py-1.5 rounded-full hover:bg-accent/10 transition-colors">Contacto</a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Contenido -->
+  <div class="relative z-10 max-w-6xl mx-auto w-full px-6 pt-10 pb-16 md:pt-14 md:pb-20">
+    <div class="max-w-4xl reveal" data-reveal-group>
+      <span class="reveal inline-block pill-accent text-accent text-xs md:text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+        Programa de implementación inicial — cupo 2026
+      </span>
+      <h1 class="reveal text-4xl md:text-[56px] leading-[1.1] font-semibold tracking-tight text-fg mb-5">
+        Control de acceso vehicular<br>para patios logísticos y portuarios
+      </h1>
+      <p class="reveal text-base md:text-lg text-fgmuted max-w-xl mb-9 leading-relaxed">
+        Detección de vehículo, lectura de placa y veredicto automático al entrar y salir.
+        Opera sin internet y sincroniza al recuperar conexión.
+      </p>
+      <div class="reveal flex flex-col sm:flex-row gap-3">
+        <a href="#contacto" class="bg-accent hover:bg-accent/90 text-black font-semibold text-sm px-6 py-3.5 rounded-md text-center transition-colors">
+          Agendar demostración en sitio
+        </a>
+        <a href="#especificaciones" class="pill border-white/20 hover:border-white/40 text-fg text-sm font-medium px-6 py-3.5 rounded-md text-center transition-colors">
+          Ver especificaciones
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ COMPATIBILIDAD ============ -->
+<section class="hairline-b bg-surface">
+  <div class="max-w-6xl mx-auto px-6 py-6">
+    <p class="reveal text-xs text-fgmuted mb-4">
+      Compatible con infraestructura de videovigilancia estándar
+    </p>
+    <!-- Nota: son estándares y marcas de cámaras soportadas, no logos de clientes -->
+    <div class="reveal flex flex-wrap gap-x-8 gap-y-3 text-sm text-fgmuted/80 font-medium">
+      <span>ONVIF</span>
+      <span>Hikvision</span>
+      <span>Dahua</span>
+      <span>Axis</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EL PROBLEMA ============ -->
+<section id="problema" class="bg-surface2 hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="reveal max-w-2xl mb-7">
+      <p class="text-accent text-sm font-semibold mb-3">El problema</p>
+      <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Cómo se registra el acceso hoy</h2>
+      <p class="text-fgmuted leading-relaxed">
+        En la mayoría de los patios, el control de entradas y salidas depende del criterio y la
+        disponibilidad de un guardia. LogiGate no cambia el proceso operativo; automatiza el
+        registro y la evidencia de cada evento.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-px bg-[#161D28] rounded-lg overflow-hidden" data-reveal-group>
+      <div class="reveal bg-surface2 p-6">
+        <p class="text-xs text-fgmuted mb-5">Hoy, sin LogiGate</p>
+        <ul class="space-y-4 text-sm text-fgmuted leading-relaxed">
+          <li class="flex gap-3"><span class="text-fgmuted/50">—</span>Bitácora en papel o Excel, capturada a mano por el guardia.</li>
+          <li class="flex gap-3"><span class="text-fgmuted/50">—</span>Sin evidencia fotográfica asociada al evento.</li>
+          <li class="flex gap-3"><span class="text-fgmuted/50">—</span>Sin trazabilidad confiable: consultar un evento pasado implica revisar cuadernos o archivos sueltos.</li>
+          <li class="flex gap-3"><span class="text-fgmuted/50">—</span>Tiempos de fila sujetos a la captura manual de placa.</li>
+        </ul>
+      </div>
+      <div class="reveal bg-surface2 p-6">
+        <p class="text-xs text-accent mb-5">Con LogiGate</p>
+        <ul class="space-y-4 text-sm text-fg leading-relaxed">
+          <li class="flex gap-3"><span class="text-accent">—</span>Lectura automática de placa al entrar y al salir.</li>
+          <li class="flex gap-3"><span class="text-accent">—</span>Veredicto automático por evento: autorizado o revisión manual.</li>
+          <li class="flex gap-3"><span class="text-accent">—</span>Bitácora digital consultable y exportable, con evidencia fotográfica por evento.</li>
+          <li class="flex gap-3"><span class="text-accent">—</span>Sustituye el registro manual en papel o Excel que hoy hacen los guardias.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Roadmap: mención única, sin ilustrar ni ejemplificar -->
+    <p class="reveal text-xs text-fgmuted/70 mt-6">
+      En desarrollo: módulo de inspección automática de daños en carrocería. Roadmap, no disponible en esta etapa.
+    </p>
+  </div>
+</section>
+
+<!-- ============ CÓMO FUNCIONA ============ -->
+<section id="como-funciona" class="bg-surface hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="reveal max-w-2xl mb-7">
+      <p class="text-accent text-sm font-semibold mb-3">Cómo funciona</p>
+      <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Flujo de acceso</h2>
+      <p class="text-fgmuted leading-relaxed">
+        El procesamiento ocurre en sitio. La nube solo recibe una copia sincronizada de los
+        registros; no es requisito para que el sistema opere en la caseta.
+      </p>
+    </div>
+
+    <div id="flowSequence" class="reveal hairline rounded-lg p-6 md:p-8 bg-surface2">
+      <svg id="vehSvg" viewBox="0 0 640 200" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ilustración esquemática del flujo de acceso vehicular: aproximación, detección, lectura de placa, veredicto y registro">
+        <!-- Carril -->
+        <line x1="0" y1="150" x2="640" y2="150" stroke="#161D28" stroke-width="2"></line>
+
+        <!-- Poste y cámara -->
+        <line x1="300" y1="70" x2="300" y2="155" stroke="#8B97A8" stroke-width="2"></line>
+        <g transform="translate(276,48)">
+          <rect x="0" y="0" width="26" height="16" rx="2" fill="none" stroke="#8B97A8" stroke-width="1.4"></rect>
+          <circle cx="8" cy="8" r="3.5" fill="none" stroke="#8B97A8" stroke-width="1.2"></circle>
+          <path d="M26,4 L34,0 L34,16 L26,12 Z" fill="none" stroke="#8B97A8" stroke-width="1.2"></path>
+        </g>
+
+        <!-- Pluma: por defecto abierta (estado final, sin JS) -->
+        <line id="seqBarrier" x1="300" y1="110" x2="360" y2="110" stroke="#F97316" stroke-width="3" stroke-linecap="round" style="transform:rotate(-78deg);"></line>
+
+        <!-- Veredicto: visible por defecto (estado final) -->
+        <g id="seqVerdict" class="seq-fade" style="opacity:1">
+          <rect x="255" y="52" width="96" height="26" rx="4" fill="#0B1119" stroke="#F97316" stroke-width="1"></rect>
+          <text x="303" y="69" text-anchor="middle" font-size="12" font-weight="600" fill="#F97316">Autorizado</text>
+        </g>
+
+        <!-- Vehículo: por defecto ya cruzó (estado final, x=420) -->
+        <g id="veh" style="transform:translate(420px,0);">
+          <!-- Corchetes de detección: ocultos por defecto (transitorios) -->
+          <g id="vehBbox" class="seq-fade" style="opacity:0">
+            <path d="M-8,110 L-8,100 L2,100" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+            <path d="M62,100 L72,100 L72,110" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+            <path d="M-8,156 L-8,166 L2,166" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+            <path d="M62,166 L72,166 L72,156" fill="none" stroke="#F97316" stroke-width="1.6"></path>
+          </g>
+
+          <!-- Placa leída: oculta por defecto (transitoria) -->
+          <g id="vehPlate" class="seq-fade" style="opacity:0">
+            <rect x="7" y="76" width="50" height="18" rx="3" fill="#0B1119" stroke="#F97316" stroke-width="1"></rect>
+            <text x="32" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="#E8EDF5">AB·12·34</text>
+          </g>
+
+          <!-- Silueta esquemática del vehículo -->
+          <path d="M0,148 L4,132 L18,116 L46,116 L58,132 L64,148" fill="none" stroke="#E8EDF5" stroke-width="2" stroke-linejoin="round"></path>
+          <line x1="0" y1="148" x2="64" y2="148" stroke="#E8EDF5" stroke-width="2"></line>
+          <circle cx="14" cy="150" r="7" fill="none" stroke="#E8EDF5" stroke-width="2"></circle>
+          <circle cx="50" cy="150" r="7" fill="none" stroke="#E8EDF5" stroke-width="2"></circle>
+        </g>
+      </svg>
+
+      <p class="text-[11px] text-fgmuted/70 mt-3">Ilustración esquemática del flujo de acceso — no es una captura del producto real.</p>
+
+      <ol id="seqRail" class="flex flex-wrap gap-2 mt-5 text-xs">
+        <li data-stage="0" class="seq-step px-3 py-1.5 rounded-full">Aproximación</li>
+        <li data-stage="1" class="seq-step px-3 py-1.5 rounded-full">Detección</li>
+        <li data-stage="2" class="seq-step px-3 py-1.5 rounded-full">Placa leída</li>
+        <li data-stage="3" class="seq-step px-3 py-1.5 rounded-full">Veredicto</li>
+        <li data-stage="4" class="seq-step px-3 py-1.5 rounded-full">Registro</li>
+      </ol>
+
+      <div class="flex items-center justify-between gap-4 mt-5">
+        <p id="seqLogEntry" class="seq-fade text-xs text-fgmuted" style="opacity:1">Evento registrado en bitácora, con evidencia fotográfica.</p>
+        <button id="seqReplay" type="button" class="hairline rounded-md px-3 py-1.5 text-xs text-fgmuted hover:text-fg hover:border-accent/50 transition-colors flex-shrink-0">
+          Repetir secuencia
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ESPECIFICACIONES ============ -->
+<section id="especificaciones" class="bg-surface2 hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="reveal max-w-2xl mb-7">
+      <p class="text-accent text-sm font-semibold mb-3">Especificaciones de despliegue</p>
+      <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Lo que necesita saber antes de instalar</h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#161D28] rounded-lg overflow-hidden" data-reveal-group>
+      <div class="reveal bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Operación sin internet</p>
+        <p class="text-sm text-fgmuted leading-relaxed">El sistema sigue registrando entradas y salidas sin conexión. Sincroniza automáticamente al recuperar enlace.</p>
+      </div>
+      <div class="reveal bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Procesamiento local</p>
+        <p class="text-sm text-fgmuted leading-relaxed">La lectura de placa y el veredicto se generan en el equipo instalado en la caseta, no en la nube.</p>
+      </div>
+      <div class="reveal bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Respaldo ante corte de energía</p>
+        <p class="text-sm text-fgmuted leading-relaxed">Se recomienda respaldo de energía (UPS) en la caseta para continuidad durante interrupciones del suministro.</p>
+      </div>
+      <div class="bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Requisitos de red</p>
+        <p class="text-sm text-fgmuted leading-relaxed">Red local (LAN) entre cámara y equipo de procesamiento. No requiere ancho de banda dedicado a internet para operar.</p>
+      </div>
+      <div class="bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Cámaras compatibles</p>
+        <p class="text-sm text-fgmuted leading-relaxed">Cualquier cámara IP compatible con ONVIF, incluyendo Hikvision, Dahua y Axis.</p>
+      </div>
+      <div class="bg-surface2 p-6">
+        <p class="text-sm font-semibold text-fg mb-2">Montaje e instalación</p>
+        <p class="text-sm text-fgmuted leading-relaxed">Caseta de acceso o poste con línea de vista al carril. El tiempo de instalación se define en el levantamiento en sitio.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRIVACIDAD ============ -->
+<section id="privacidad" class="bg-surface hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="grid md:grid-cols-2 gap-6" data-reveal-group>
+      <div class="reveal">
+        <p class="text-accent text-sm font-semibold mb-3">Datos y privacidad</p>
+        <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Las placas son datos personales</h2>
+        <p class="text-fgmuted leading-relaxed">
+          Bajo la Ley Federal de Protección de Datos Personales en Posesión de los Particulares
+          (LFPDPPP), el número de placa es un dato personal. LogiGate se diseña para que ese
+          dato permanezca bajo el control del cliente.
+        </p>
+      </div>
+      <div class="reveal hairline rounded-lg p-6 bg-surface2">
+        <ul class="space-y-5 text-sm text-fgmuted leading-relaxed">
+          <li><span class="text-fg font-medium block mb-1">Almacenamiento</span>Los registros se guardan en sitio, en equipo bajo control del cliente.</li>
+          <li><span class="text-fg font-medium block mb-1">Retención</span>Políticas de retención configurables según las necesidades del cliente.</li>
+          <li><span class="text-fg font-medium block mb-1">Acceso</span>Acceso a la bitácora por usuario, con perfiles diferenciados.</li>
+          <li>
+            <span class="text-fg font-medium block mb-1">Aviso de privacidad</span>
+            <span class="text-fgmuted">El aviso de privacidad se entrega junto con la propuesta comercial, adaptado al esquema de operación del sitio.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUIÉN ESTÁ DETRÁS ============ -->
+<section id="nosotros" class="bg-surface2 hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="reveal max-w-2xl mb-5">
+      <p class="text-accent text-sm font-semibold mb-3">Quién está detrás</p>
+      <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Marventec</h2>
+    </div>
+    <div class="reveal hairline rounded-lg p-6 md:p-8 bg-surface max-w-3xl">
+      <p class="text-fgmuted leading-relaxed mb-6">
+        LogiGate es desarrollado por <span class="text-fg font-medium">Marventec</span>, agencia
+        de desarrollo de software con sede en Veracruz. El proyecto está a cargo de
+        <span class="text-fg font-medium">Luis Gabriel Venegas Saucedo</span>, responsable
+        directo de la implementación y el acompañamiento técnico durante el programa piloto.
+      </p>
+      <p class="text-sm text-fgmuted/80">
+        Los servicios contratados se facturan con Comprobante Fiscal Digital por Internet (CFDI).
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROGRAMA DE IMPLEMENTACIÓN INICIAL ============ -->
+<section class="bg-surface hairline-b">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="reveal max-w-2xl">
+      <p class="text-accent text-sm font-semibold mb-3">Programa de implementación inicial</p>
+      <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-4">Cupo limitado de sitios piloto</h2>
+      <p class="text-fgmuted leading-relaxed mb-8">
+        Estamos seleccionando un número limitado de patios y terminales para validar LogiGate en
+        condiciones reales de operación, con acompañamiento directo del equipo de desarrollo
+        durante la implementación y el primer periodo de uso.
+      </p>
+      <a href="#contacto" class="reveal inline-block bg-accent hover:bg-accent/90 text-black font-semibold text-sm px-6 py-3.5 rounded-md transition-colors">
+        Solicitar información del programa
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACTO ============ -->
+<section id="contacto" class="bg-surface2">
+  <div class="max-w-6xl mx-auto px-6 py-10 md:py-12">
+    <div class="grid md:grid-cols-2 gap-7" data-reveal-group>
+      <div class="reveal">
+        <p class="text-accent text-sm font-semibold mb-3">Contacto</p>
+        <h2 class="text-2xl md:text-3xl font-semibold text-fg mb-8">Hablemos de su patio</h2>
+        <div class="space-y-6 text-sm">
+          <div>
+            <p class="text-fgmuted mb-1">Correo corporativo</p>
+            <!-- Sustituir por el correo corporativo real -->
+            <a href="mailto:contacto@logigate.com.mx" class="text-fg font-medium hover:text-accent transition-colors">contacto@logigate.com.mx</a>
+          </div>
+          <!-- WhatsApp: REEMPLAZAR con el número real antes de publicar. Bloque fuera del render mientras tanto (no mostrar número inventado).
+          <div>
+            <p class="text-fgmuted mb-1">WhatsApp</p>
+            <a href="https://wa.me/52XXXXXXXXXX" class="text-fg font-medium hover:text-accent transition-colors">+52 XXX XXX XXXX</a>
+          </div>
+          -->
+          <div>
+            <p class="text-fgmuted mb-1">Ubicación</p>
+            <p class="text-fg font-medium">Veracruz, Ver., México</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal hairline rounded-lg p-6 bg-surface">
+        <!-- Endpoint del formulario: configurar aquí con la URL del servicio (recibe POST en JSON). Vacío = usa mailto: como respaldo automático. -->
+        <form id="contactForm" class="space-y-4" data-endpoint="">
+          <div>
+            <label class="block text-xs text-fgmuted mb-1.5" for="f-nombre">Nombre</label>
+            <input id="f-nombre" type="text" required class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="Nombre completo">
+          </div>
+          <div>
+            <label class="block text-xs text-fgmuted mb-1.5" for="f-empresa">Empresa</label>
+            <input id="f-empresa" type="text" class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="Terminal / patio / recinto">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-fgmuted mb-1.5" for="f-correo">Correo</label>
+              <input id="f-correo" type="email" required class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="correo@empresa.com">
+            </div>
+            <div>
+              <label class="block text-xs text-fgmuted mb-1.5" for="f-telefono">Teléfono</label>
+              <input id="f-telefono" type="tel" class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="229 123 4567">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-fgmuted mb-1.5" for="f-mensaje">Mensaje</label>
+            <textarea id="f-mensaje" rows="3" required class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="Cuéntenos sobre su patio u operación"></textarea>
+          </div>
+          <button type="submit" class="w-full bg-accent hover:bg-accent/90 text-black font-semibold text-sm px-6 py-3 rounded-md transition-colors">
+            Enviar
+          </button>
+          <div id="contactFormStatus" role="status" aria-live="polite" class="text-sm text-fgmuted"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="bg-surface2 hairline-t">
+  <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-fgmuted/70">
+    <span>LogiGate — un producto de Marventec</span>
+    <span>Veracruz, Ver., México</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- Revelado al hacer scroll (IntersectionObserver) ---------- */
+  function initReveal() {
+    if (reduceMotion || !("IntersectionObserver" in window)) return;
+
+    var groups = document.querySelectorAll("[data-reveal-group]");
+    groups.forEach(function (group) {
+      var children = Array.prototype.filter.call(group.children, function (el) {
+        return el.classList.contains("reveal");
+      });
+      children.forEach(function (el, i) {
+        var delay = Math.min(i, 3) * 60;
+        el.style.transitionDelay = delay + "ms";
+      });
+    });
+
+    var targets = document.querySelectorAll(".reveal");
+    targets.forEach(function (el) {
+      el.style.opacity = "0";
+      el.style.transform = "translateY(18px)";
+    });
+
+    var observer = new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          requestAnimationFrame(function () {
+            entry.target.style.opacity = "1";
+            entry.target.style.transform = "translateY(0)";
+          });
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+
+    targets.forEach(function (el) { observer.observe(el); });
+  }
+
+  /* ---------- Secuencia de acceso vehicular ligada al scroll (sin librerías) ---------- */
+  function initVehicleSequence() {
+    var container = document.getElementById("flowSequence");
+    var veh = document.getElementById("veh");
+    if (!container || !veh) return;
+
+    /* Sin animación: deja el estado final que ya trae el HTML por defecto. */
+    if (reduceMotion) return;
+
+    var bbox = document.getElementById("vehBbox");
+    var plate = document.getElementById("vehPlate");
+    var verdict = document.getElementById("seqVerdict");
+    var barrier = document.getElementById("seqBarrier");
+    var logEntry = document.getElementById("seqLogEntry");
+    var steps = container.querySelectorAll(".seq-step");
+    var replayBtn = document.getElementById("seqReplay");
+
+    var STAGE_X = [20, 210, 210, 210, 420];
+    var autoPlaying = false;
+    var ticking = false;
+
+    function applyStage(stage) {
+      veh.style.transform = "translate(" + STAGE_X[stage] + "px,0)";
+      bbox.style.opacity = (stage >= 1 && stage <= 3) ? "1" : "0";
+      plate.style.opacity = (stage >= 2 && stage <= 3) ? "1" : "0";
+      verdict.style.opacity = (stage >= 3) ? "1" : "0";
+      barrier.style.transform = (stage >= 3) ? "rotate(-78deg)" : "rotate(0deg)";
+      logEntry.style.opacity = (stage >= 4) ? "1" : "0";
+      steps.forEach(function (li) {
+        li.classList.toggle("is-active", Number(li.getAttribute("data-stage")) === stage);
+      });
+    }
+
+    function computeStage() {
+      var rect = container.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var progress = (vh - rect.top) / (vh + rect.height);
+      progress = Math.min(Math.max(progress, 0), 1);
+      return Math.min(4, Math.floor(progress * 5));
+    }
+
+    function onScroll() {
+      if (autoPlaying) return;
+      if (!ticking) {
+        requestAnimationFrame(function () {
+          applyStage(computeStage());
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+
+    container.classList.add("seq-js");
+    applyStage(0);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    applyStage(computeStage());
+
+    if (replayBtn) {
+      replayBtn.addEventListener("click", function () {
+        if (autoPlaying) return;
+        autoPlaying = true;
+        var i = 0;
+        applyStage(0);
+        var timer = setInterval(function () {
+          i++;
+          applyStage(i);
+          if (i >= 4) {
+            clearInterval(timer);
+            setTimeout(function () {
+              autoPlaying = false;
+              applyStage(computeStage());
+            }, 600);
+          }
+        }, 500);
+      });
+    }
+  }
+
+  /* ---------- Paralaje del arco del hero (rAF, desactivado <768px) ---------- */
+  function initHeroParallax() {
+    if (reduceMotion) return;
+    if (window.innerWidth < 768) return;
+
+    var wrap = document.getElementById("heroArcWrap");
+    var hero = document.querySelector(".hero");
+    if (!wrap || !hero) return;
+
+    var ticking = false;
+    var maxShift = 0.08;
+
+    function update() {
+      var rect = hero.getBoundingClientRect();
+      var heroHeight = rect.height || 1;
+      var progress = Math.min(Math.max(-rect.top / heroHeight, 0), 1);
+      var translate = progress * maxShift * heroHeight;
+      var scale = 1 + progress * maxShift * 0.5;
+      wrap.style.transform = "translateY(" + translate.toFixed(2) + "px) scale(" + scale.toFixed(4) + ")";
+      ticking = false;
+    }
+
+    window.addEventListener("scroll", function () {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+
+  /* Red de seguridad: si el observer no llega a disparar, el contenido no debe quedar invisible. */
+  function initRevealFailSafe() {
+    if (reduceMotion) return;
+    setTimeout(function () {
+      document.querySelectorAll(".reveal").forEach(function (el) {
+        if (getComputedStyle(el).opacity === "0") {
+          el.style.opacity = "1";
+          el.style.transform = "translateY(0)";
+        }
+      });
+    }, 4000);
+  }
+
+  /* ---------- Formulario de contacto ---------- */
+  function initContactForm() {
+    var form = document.getElementById("contactForm");
+    if (!form) return;
+
+    var statusEl = document.getElementById("contactFormStatus");
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var defaultLabel = submitBtn.textContent;
+
+    function setStatus(msg, kind) {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      statusEl.className = "text-sm " + (kind === "error" ? "text-red-400" : kind === "ok" ? "text-accent" : "text-fgmuted");
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var data = {
+        nombre: document.getElementById("f-nombre").value.trim(),
+        empresa: document.getElementById("f-empresa").value.trim(),
+        correo: document.getElementById("f-correo").value.trim(),
+        telefono: document.getElementById("f-telefono").value.trim(),
+        mensaje: document.getElementById("f-mensaje").value.trim()
+      };
+
+      var endpoint = (form.getAttribute("data-endpoint") || "").trim();
+
+      if (!endpoint) {
+        var body = "Nombre: " + data.nombre + "\n" +
+          "Empresa: " + data.empresa + "\n" +
+          "Correo: " + data.correo + "\n" +
+          "Teléfono: " + data.telefono + "\n\n" +
+          data.mensaje;
+        var mailto = "mailto:contacto@logigate.com.mx" +
+          "?subject=" + encodeURIComponent("Solicitud de información — " + (data.empresa || data.nombre || "LogiGate")) +
+          "&body=" + encodeURIComponent(body);
+        window.location.href = mailto;
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Enviando…";
+      setStatus("Enviando…", "muted");
+
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      }).then(function (res) {
+        if (!res.ok) throw new Error("respuesta no válida");
+        submitBtn.disabled = false;
+        submitBtn.textContent = defaultLabel;
+        form.reset();
+        setStatus("Mensaje enviado. Le responderemos a la brevedad.", "ok");
+      }).catch(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = defaultLabel;
+        setStatus("No se pudo enviar. Escríbanos directamente a contacto@logigate.com.mx.", "error");
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initReveal();
+    initVehicleSequence();
+    initHeroParallax();
+    initRevealFailSafe();
+    initContactForm();
+  });
+})();
+</script>
+
+</body>
+</html>
