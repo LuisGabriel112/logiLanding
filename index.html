@@ -400,7 +400,7 @@
 
       <div class="reveal hairline rounded-lg p-6 bg-surface">
         <!-- Endpoint del formulario: configurar aquí con la URL del servicio (recibe POST en JSON). Vacío = usa mailto: como respaldo automático. -->
-        <form id="contactForm" class="space-y-4" data-endpoint="">
+        <form id="contactForm" class="space-y-4" data-endpoint="https://formspree.io/f/xgaeygjl">
           <div>
             <label class="block text-xs text-fgmuted mb-1.5" for="f-nombre">Nombre</label>
             <input id="f-nombre" type="text" required class="w-full bg-surface2 hairline rounded-md px-3 py-2.5 text-sm text-fg placeholder-fgmuted/50 focus:border-accent" placeholder="Nombre completo">
@@ -641,7 +641,7 @@
 
       fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(data)
       }).then(function (res) {
         if (!res.ok) throw new Error("respuesta no válida");
