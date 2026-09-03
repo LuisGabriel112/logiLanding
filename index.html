@@ -240,6 +240,16 @@
 
     <div id="flowSequence" class="reveal hairline rounded-lg p-6 md:p-8 bg-surface2">
       <svg id="vehSvg" viewBox="0 0 640 200" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ilustración esquemática del flujo de acceso vehicular: aproximación, detección, lectura de placa, veredicto y registro">
+        <defs>
+          <linearGradient id="carBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3B4658"></stop>
+            <stop offset="100%" stop-color="#171F2B"></stop>
+          </linearGradient>
+          <linearGradient id="carRoof" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#B7C2D1"></stop>
+            <stop offset="100%" stop-color="#8593A8"></stop>
+          </linearGradient>
+        </defs>
         <!-- Carril -->
         <line x1="0" y1="150" x2="640" y2="150" stroke="#161D28" stroke-width="2"></line>
 
@@ -276,11 +286,17 @@
             <text x="32" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="#E8EDF5">AB·12·34</text>
           </g>
 
-          <!-- Silueta esquemática del vehículo -->
-          <path d="M0,148 L4,132 L18,116 L46,116 L58,132 L64,148" fill="none" stroke="#E8EDF5" stroke-width="2" stroke-linejoin="round"></path>
-          <line x1="0" y1="148" x2="64" y2="148" stroke="#E8EDF5" stroke-width="2"></line>
-          <circle cx="14" cy="150" r="7" fill="none" stroke="#E8EDF5" stroke-width="2"></circle>
-          <circle cx="50" cy="150" r="7" fill="none" stroke="#E8EDF5" stroke-width="2"></circle>
+          <!-- Silueta del vehículo con sombreado plano (pseudo-3D): carrocería, techo iluminado y ventana -->
+          <path d="M2,148 C2,142 5,137 10,135 L15,135 C17,123 24,115 32,115 C40,115 47,123 49,135 L54,135 C59,137 62,142 62,148 Z" fill="url(#carBody)" stroke="#E8EDF5" stroke-width="1.4" stroke-linejoin="round"></path>
+          <path d="M18,133 C19,127 22,120 26,118 L38,118 C42,120 45,127 46,133 Z" fill="url(#carRoof)" stroke="#0B1119" stroke-width="1" stroke-linejoin="round"></path>
+          <ellipse cx="2.5" cy="141" rx="1.4" ry="2.2" fill="#F97316"></ellipse>
+          <ellipse cx="61.5" cy="141" rx="1.4" ry="2.2" fill="#EF4444" opacity="0.8"></ellipse>
+          <circle cx="16" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
+          <path d="M10,147 A7,7 0 0 1 22,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
+          <circle cx="16" cy="150" r="2" fill="#E8EDF5"></circle>
+          <circle cx="48" cy="150" r="7" fill="#0B1119" stroke="#E8EDF5" stroke-width="2"></circle>
+          <path d="M42,147 A7,7 0 0 1 54,147" fill="none" stroke="#8FA0B8" stroke-width="1.2" opacity="0.7"></path>
+          <circle cx="48" cy="150" r="2" fill="#E8EDF5"></circle>
         </g>
       </svg>
 
