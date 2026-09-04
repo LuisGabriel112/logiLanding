@@ -70,25 +70,8 @@
 }
 </script>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          ink: '#000000',
-          surface: '#080C14',
-          surface2: '#0B1119',
-          border: '#161D28',
-          fg: '#E8EDF5',
-          fgmuted: '#8B97A8',
-          accent: '#F97316',
-        },
-        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-      }
-    }
-  }
-</script>
+<!-- CSS de Tailwind precompilado (Tailwind CLI v3, purgado a las clases usadas en este archivo) en vez del CDN JIT en runtime -->
+<link rel="stylesheet" href="styles.css">
 
 <style>
   :root { color-scheme: dark; }
