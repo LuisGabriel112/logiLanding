@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LogiGate — Control de acceso vehicular para patios logísticos y portuarios</title>
-<meta name="description" content="LogiGate: detección de vehículo, lectura automática de placa y veredicto de acceso al entrar y salir. Procesamiento local, operación sin internet, bitácora digital con evidencia. Caso inicial: Puerto de Veracruz.">
+<meta name="description" content="Control de acceso vehicular con visión por computadora para patios logísticos y portuarios en México. Lectura de placa, veredicto automático, opera sin internet.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://logigate.com.mx">
 
 <!-- Open Graph: og-image.png ya generado (1200x630), en la raíz del repo. Subirlo junto con index.html a logigate.com.mx -->
 <meta property="og:type" content="website">
@@ -24,8 +27,10 @@
 <meta name="twitter:image" content="https://logigate.com.mx/og-image.png">
 <meta name="twitter:image:alt" content="LogiGate — Control de acceso vehicular para patios logísticos y portuarios">
 
-<!-- Favicon SVG inline: arco naranja sobre fondo negro, reemplazar si se define un logo definitivo -->
+<!-- Favicon: SVG inline pa' navegadores modernos + PNG real pa' Google/iOS (mismo diseño, generado desde el SVG) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23000000'/%3E%3Cpath d='M8 40 A28 28 0 0 1 56 24' fill='none' stroke='%23F97316' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,6 +41,34 @@
   window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
+
+<!-- Datos estructurados: refleja solo lo que ya está en la página, sin datos inventados -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "LogiGate",
+  "serviceType": "Control de acceso vehicular con visión por computadora",
+  "description": "Detección de vehículo, lectura automática de placa y veredicto de acceso al entrar y salir para patios logísticos y portuarios. Procesamiento local, opera sin internet.",
+  "url": "https://logigate.com.mx",
+  "areaServed": {
+    "@type": "City",
+    "name": "Veracruz"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "LogiGate",
+    "url": "https://logigate.com.mx",
+    "email": "contacto@logigate.com.mx",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Veracruz",
+      "addressRegion": "Veracruz",
+      "addressCountry": "MX"
+    }
+  }
+}
+</script>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
